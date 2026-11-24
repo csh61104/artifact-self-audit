@@ -1,0 +1,148 @@
+{
+  "schema": "artifact-self-audit.fixtures/expected@1",
+  "baseline": "2026-10-15 · 技能 v1.4.0 · 13 单产物样本 + 2 跨文件用例 · 基线值全部由实测确定，非人工推定",
+  "note": "改动技能（SKILL.md / audit-rules.md / scan_artifact.py）后必须重跑 evolve.py --ratchet；全绿才允许保留改动，出现红项即回滚。",
+  "cases": [
+    {
+      "id": "zip-with-apk-ext",
+      "path": "binary/min.zip.apk",
+      "why": "回归 2026-10-14 的 .apk 误报：合法 ZIP 顶着 .apk 扩展名，必须走结构分支，不得按文本硬解",
+      "expect": {
+        "fail": 0,
+        "warn": 0,
+        "checks_exclude": ["编码或乱码风险", "TBD", "XXX"]
+      }
+    },
+    {
+      "id": "text-with-apk-ext",
+      "path": "binary/fake.apk",
+      "why": "扩展名是压缩包但内容不是：嗅探不出魔数时须靠扩展名兜底报结构异常，不得放行",
+      "expect": {
+        "fail": 1,
+        "warn": 0,
+        "checks_include": ["压缩包结构异常"]
+      }
+    },
+    {
+      "id": "broken-nonzip-archive",
+      "path": "binary/broken.7z",
+      "why": "非 ZIP 压缩包走魔数校验",
+      "expect": {
+        "fail": 1,
+        "warn": 0,
+        "checks_include": ["压缩包结构异常"]
+      }
+    },
+    {
+      "id": "fully-garbled",
+      "path": "text/garbled.txt",
+      "why": "整篇乱码判 FAIL（替换字符占比 > 1%）",
+      "expect": {
+        "fail": 1,
+        "warn": 0,
+        "checks_include": ["编码或乱码风险"]
+      }
+    },
+    {
+      "id": "minor-noise",
+      "path": "text/minor_noise.txt",
+      "why": "极少量坏字节不得判 FAIL（原写法一个替换字符即 FAIL，过严）",
+      "expect": {
+        "fail": 0,
+        "warn": 0
+      }
+    },
+    {
+      "id": "empty-section",
+      "path": "prose/empty_section.md",
+      "why": "空章节仍须报出，避免为了降噪把真问题一起放掉",
+      "expect": {
+        "fail": 1,
+        "warn": 0,
+        "checks_include": ["空章节"]
+      }
+    },
+    {
+      "id": "clean-prose",
+      "path": "prose/clean.md",
+      "why": "干净文档零发现",
+      "expect": {
+        "fail": 0,
+        "warn": 0
+      }
+    },
+    {
+      "id": "fenced-code",
+      "path": "prose/fenced.md",
+      "why": "围栏内的井号注释与方括号链接都不是 Markdown 语法，不得报空章节或断链",
+      "expect": {
+        "fail": 0,
+        "warn": 0,
+        "checks_exclude": ["空章节", "断链引用"]
+      }
+    },
+    {
+      "id": "real-todo-in-source",
+      "path": "code/todo.py",
+      "why": "源码里的真实待办照常报出，同时语法类符号不得误报",
+      "expect": {
+        "fail": 0,
+        "warn": 1,
+        "checks_include": ["TODO"],
+        "checks_exclude": ["空方括号", "双花括号"]
+      }
+    },
+    {
+      "id": "name-with-copy",
+      "path": "naming/copyright.md",
+      "why": "文件名含 copy 但非独立成词，不得判为副本（词边界修复的回归）",
+      "expect": {
+        "fail": 0,
+        "warn": 0
+      }
+    },
+    {
+      "id": "broken-json",
+      "path": "structured/broken.json",
+      "why": "结构化文件语法校验：自定义提示词里的裸引号会让整份配置解析失败，此前 .json 属非散文类、从不验语法，零检出",
+      "expect": {
+        "fail": 1,
+        "warn": 0,
+        "checks_include": ["JSON 语法错误"]
+      }
+    },
+    {
+      "id": "valid-json",
+      "path": "structured/valid.json",
+      "why": "合法 JSON 不得误报——新增语法校验后必须零发现，否则每次扫配置都是噪声",
+      "expect": {
+        "fail": 0,
+        "warn": 0
+      }
+    },
+    {
+      "id": "placeholder-in-name",
+      "path": "naming/placeholder-name.md",
+      "why": "谈论「名字」的句子里的 XXX 属专有名词/模板说明，必须降噪（原写法对「毛选-XXX 技能名」持续误报）",
+      "expect": {
+        "fail": 0,
+        "warn": 0,
+        "checks_include": ["XXX"]
+      }
+    }
+  ],
+  "xref_cases": [
+    {
+      "id": "xref-dangling-detected",
+      "files": ["crossrefs/target.md", "crossrefs/dangling.md"],
+      "why": "跨文件引用可达性：真断链必须报出（2 条），同时不得把元描述「引用指向的章节其实不存在」与强调引号「为什么」算作悬空",
+      "expect_dangling": 2
+    },
+    {
+      "id": "xref-clean-zero",
+      "files": ["crossrefs/target.md", "crossrefs/clean.md"],
+      "why": "全部可达时零悬空——降噪不能过头，否则该报的也会被一并放掉",
+      "expect_dangling": 0
+    }
+  ]
+}

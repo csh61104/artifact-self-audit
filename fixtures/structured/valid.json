@@ -1,0 +1,8 @@
+{
+  "locale": "zh-CN",
+  "items": ["a", "b", "c"],
+  "nested": {
+    "key": "值",
+    "note": "合法 JSON，不应产生任何发现"
+  }
+}
